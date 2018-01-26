@@ -10,12 +10,11 @@
 'use strict';
 
 const https = require( 'https' ),
-      util = require( 'util' ),
       aws = require( 'aws-sdk' );
 
 const DEBUG = 'true' === process.env.DEBUG;
 
-exports.handler = ( event, context ) => {
+exports.handler = ( event, context, callback ) => {
 
   if ( DEBUG ) console.log( JSON.stringify( event, null, 2 ) );
 
@@ -131,7 +130,7 @@ exports.handler = ( event, context ) => {
       body += chunk;
     }).on('end', () => {
       console.log( 'Response from Slack: ' + body );
-      context.done( null, body );
+      callback( null, body );
     });
   });
 
@@ -139,7 +138,7 @@ exports.handler = ( event, context ) => {
     throw Error( 'Problem with Slack request: ' + error.message );
   });
 
-  request.write( util.format( '%j', postData ) );
+  request.write( JSON.stringify( postData ) );
   request.end();
 
 }; // Exports.handler.
