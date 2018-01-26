@@ -5,5 +5,8 @@
   "main": "index.js",
   "repository": "git+https://github.com/tdmalone/sns-to-slack.git",
   "author": "Tim Malone <tdmalone@gmail.com>",
-  "license": "MIT"
+  "license": "MIT",
+  "scripts": {
+    "test": "docker run --rm -e CI -e SLACK_HOOK -v \"${PWD}\":/var/task lambci/lambda:nodejs6.10 index.handler \"$(cat tests/fixtures/test-event.json)\""
+  }
 }
