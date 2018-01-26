@@ -1,0 +1,59 @@
+language: node_js
+services: docker
+node_js: 6.10
+
+env:
+  global:
+
+    - AWS_ACCESS_KEY_ID=AKIAJSKPE7ZXOFH3THUA
+    - AWS_DEFAULT_REGION=ap-southeast-2
+    - LAMBDA_NAME=snsToSlack
+    - LAMBDA_ALIAS=prod
+
+    # AWS_SECRET_ACCESS_KEY
+    - secure: Sm3Q7Vc9KepcqxKt7OELeJd5CjuUzNbk0GdZYK6JObLOEacOwJXScxZwLPvvUFPo52q7xSbL3EdkadfDgk8GMOTdSaBtdf2drYNvq7MMGpT6X3YBQcBfEFwH07Ju5uvjbpCFvXk2B8mSEI88inbtY6IXvSZOmL1QZ13Y19hVySS7Juqx+kd6sizPmhBDrOUbpp6OkBUGLED5X05jD3dbJjyGLTnhBROXBQHt+09I8/o074esJXTcLEiByVr0rFy1aRJcJVMb+LV2nm9u/1DfRGE2uhcTc8JGPtja43SfC0BeI/UvVS4oxjZR2L1QHQiTyARFkoZ58AsGZqbi+n/Qzxy1D6Q43u6JXeJXkQD3YPeuLBKsO/N2QjIcfQzHeYqqAPV0rey9JF1+sHwShsTrKOeNwvL5MnvH7rwnH4y9EKmLoAwSv6zWCYGSSUMv5OpceuY3Sq9pAnol12t3TRGS9LA30M8Qtf1oPMPe1bOeoSfc2+dqWEJuHzcY2RhykWfqNJBf+iN8U0YI+i+UZxIs9HhwjkJIXUftLXBM9GwNDio0eyddYiAqXRxvbwFYuQXlwBFNr5mkJb2R3MvsnmrawGRAmPCST69K9rzcY8yxjqxxvQ2BW/6UDRg9AlUGBhnmpZL7aLBEU84kdiyxme6KGBG0rQqgEOt9auNES6lM7VE=
+
+install: true
+script: yarn test
+before_deploy: rm -rf .*rc.js
+
+deploy:
+
+  - provider: lambda
+    publish: true
+    function_name: $LAMBDA_NAME
+    region: $AWS_DEFAULT_REGION
+    role: arn:aws:iam::873114526714:role/genericLambdaRole
+    description: Sends SNS notifications to a Slack channel.
+    runtime: nodejs6.10
+    timeout: 30
+    handler_name: handler
+    access_key_id: $AWS_ACCESS_KEY_ID
+    secret_access_key:
+      secure: q/1vuoGHCi0E5nBSb61pfRo4Zr+lJYbj/imA7evZ15Z+DLmdci9GN4U2A1v3L9/O96D2evMKJ1cRFDEkhfLXZnvjQbi5v39/cbV+gLvQILP8zK2B8JhURuRcrF4z0m5pVbTTkGfHMZcZpTv0hAi3qdIm+4UhPr+xpaQlSMl0ciw41SMKMqJEbezEjYAN/9fqzt9XihOQo80uCD3LUrpc8z+e8ZEzZ0nPhlMybwMSk3mWh5gjcecCj6KT8zawNjYcolw/1D+h5S/kan0G/ql/pc0OjAuWg5LFN3jcFBe0enhS8pGrVfj621LiMMm1M0wOE4EhJ87jP7Vqxeiso1cUh4rMxZDkHBbsC3EenMcedqt4hek9RfsvCJST1SctYdQVYF2SGiQ3pdb3Ke7hOaUxcXC3VRVbeZ65Xec+gvGVbxgH3Te3KUe0zaxpLpEwEG4I1MEbnJWlxUh1wmkMy3j1Y1ev4zbGeJY5LY6sqfbUst8Dj9mtwg3dR5O6qZc1PApcwl4t+SoUbBR+PsaXx6SAcXvrgGv3Z9nGa4EPiNKFD/rKPS8Wi5SVKVgkt45AJh0see4PlH9MjCu3D3ela+iWMxY4YnaTU7Hy/fueUdomnmDWYR3w+fKwIJre1b2XgV0rpvccwbVC2LHTU1WFnVCyWxW2EborZyjLXst3kHpVJjk=
+    skip_cleanup: true
+    on:
+      branch: master
+
+  - provider: npm
+    email: tdmalone@gmail.com
+    api_key:
+      secure: jswdrI6Trgt+KyWN+zJKGBjWaZsGzaJr7HkCVh2PW78WmFs6TKx+WrtiC0oSH0GifFRdLx43vNPPNyUIJvq6ZCyecCKc/3GjO3e9mJ7Rn2KaLt0I2xcYyVYrKCiJIPhTX7iOj/0VgY2Rln5faq+slGfcA+kjBqgxCCqsEY3/l95LvWNcqKWU+Awvq3RM4P8PkkXXYB9H094f/OOOA5mVslPpkV5EAtyS+tIF8Fc8un1da6YzkrY5FFbx1cxf1bLHH7KstIRSU1brWAQfZB/zrBnCuvUPtoSbZ1ZACEHTf+pfI6Kml3y2zJh7g+sgMsRCNqvPKnXcG5seCt5DqJuPE8+J8ivPu7B8tZALnc/BrvQfr+wcuXkfe4DePK6JOcB0RQckOeXt0bqxNFUIUKNzSHtbsPt8MTH1wec9pH7LMjYZ2zs+noIZUWhl4CMemqy0DWR781dwr7ysYhlkbZ+pRfPZrJ/IJpB78DxSPHGZNep70S3LVcOPeSgSGAZscl4hkEEwbN5BBZ6bakriLKJZkjgO8UTPX//8X0Zg3m7Q3oMOcqw+IGasH0wOV1qOUbQNJObVy5JVFyRGnMaNDlxUWSknyc9+OO2R2ztbhImwTixN5Z4a1xEywcQQDSKzD8AbmEjgcgIAnqzOkOlP+Gz/KBVMRvXMGC7JJRotBYmqoDA=
+    skip_cleanup: true
+    on:
+      branch: master
+      tags: true
+
+after_deploy:
+
+  # Set a Lambda alias to the most recently deployed version.
+  - pip install awscli --upgrade --user
+  - export MOST_RECENT=$(aws lambda list-versions-by-function --function "${LAMBDA_NAME}" --max-items 10000 | node -e "let stdin=''; process.stdin.on('data',(chunk)=>{stdin+=chunk}).on('end',()=>{console.log(JSON.parse(stdin).Versions.pop().Version)})")
+  - aws lambda update-alias --function-name "${LAMBDA_NAME}" --name "${LAMBDA_ALIAS}" --function-version "${MOST_RECENT}"
+
+notifications:
+  email: false
+  slack:
+    on_start: always
+    rooms:
+      - secure: KICc5h5iDu8RZIlvrhDx7jPYHKzB5s4Fj6eDZNuBDW73s46uN7bey/D4Yx3IFb7SqfU1x59V3D7rw74hdxeY1YqnAHD485/uA1fsudogWHX++lsIFl22PCcLKQT7TQEJq3YdC32WLdleSe8GBQn5fNQtZTUnFZlHHhdmA3JH2YUFb9OyJldzwavHhHOJDpvkYrBgr5sYWHsu3bvyzzlAPtQWEBqxhItA0h8mc3g5ROmYOd9G4PDt31qAbnyzAP+OlaF5OkUxWXKMh7WCvT+yCpfvsjRkWKbo5mIzI5A3lxEhjdRMuCj/NUIfKSuVJPXZvEi3k14gDytndg6HDLaIIFfMyf56l6JpByp2FBIQ71nSxLo7YG59sM0y3M3CsVQcF574njGUuCoPvIKpOIZRjm/ZL9MoUw8Zl/TaPHg9ECn1hDN2eP0QO+o0EjKdJgfq0K/HNcZlKUOnc9SZW1e8vUyenplNtN4NiIX4FKI4Zr0IdXkDEIZxolRiv7TOhisEzoN2HnVOhPk21mrOD8h+DC7bevTLq7YYVsYRxIfF7vTtXlrkMOCDZd2HH2pa4tTsNhesGUdgpYCs+lAQfTjcxv0uwgN+leikoCeeg5WBLGBMxUdWRX0kGgt2qVyU4FEjYwAsZ9eWUptVoY/AZsgXZiQdVWuiEzvR2DrbnlUWrTQ=
