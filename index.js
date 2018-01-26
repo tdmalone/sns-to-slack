@@ -93,8 +93,13 @@ exports.handler = ( event, context, callback ) => {
   // If the message is in JSON, format it more nicely.
   try {
 
-    const json = JSON.parse( message );
+    let json = JSON.parse( message );
     const fields = [];
+
+    // Message config change notifications from AWS Config - we only need the diff, not the whole config.
+    if ( json.configurationItemDiff && 'ConfigurationItemChangeNotification' === json.messageType ) {
+      json = json.configurationItemDiff;
+    }
 
     Object.keys( json ).forEach( ( key ) => {
       fields.push({
