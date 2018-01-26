@@ -10,12 +10,11 @@
 'use strict';
 
 const https = require( 'https' ),
-      util = require( 'util' ),
       aws = require( 'aws-sdk' );
 
 const DEBUG = 'true' === process.env.DEBUG;
 
-exports.handler = ( event, context ) => {
+exports.handler = ( event, context, callback ) => {
 
   if ( DEBUG ) console.log( JSON.stringify( event, null, 2 ) );
 
@@ -94,8 +93,13 @@ exports.handler = ( event, context ) => {
   // If the message is in JSON, format it more nicely.
   try {
 
-    const json = JSON.parse( message );
+    let json = JSON.parse( message );
     const fields = [];
+
+    // Message config change notifications from AWS Config - we only need the diff, not the whole config.
+    if ( json.configurationItemDiff && 'ConfigurationItemChangeNotification' === json.messageType ) {
+      json = json.configurationItemDiff;
+    }
 
     Object.keys( json ).forEach( ( key ) => {
       fields.push({
@@ -131,7 +135,7 @@ exports.handler = ( event, context ) => {
       body += chunk;
     }).on('end', () => {
       console.log( 'Response from Slack: ' + body );
-      context.done( null, body );
+      callback( null, body );
     });
   });
 
@@ -139,7 +143,7 @@ exports.handler = ( event, context ) => {
     throw Error( 'Problem with Slack request: ' + error.message );
   });
 
-  request.write( util.format( '%j', postData ) );
+  request.write( JSON.stringify( postData ) );
   request.end();
 
 }; // Exports.handler.

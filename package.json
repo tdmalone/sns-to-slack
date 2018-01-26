@@ -7,6 +7,9 @@
   "author": "Tim Malone <tdmalone@gmail.com>",
   "license": "MIT",
   "scripts": {
-    "test": "docker run --rm -e CI -e SLACK_HOOK -v \"${PWD}\":/var/task lambci/lambda:nodejs6.10 index.handler \"$(cat tests/fixtures/test-event.json)\""
+    "test": "yarn test-generic-event && yarn test-config-change",
+    "test-generic-event": "yarn _test \"$(cat tests/fixtures/generic-event.json)\"",
+    "test-config-change": "yarn _test \"$(cat tests/fixtures/config-change.json)\"",
+    "_test": "docker run --rm -e CI -e SLACK_HOOK -v \"${PWD}\":/var/task lambci/lambda:nodejs6.10 index.handler"
   }
 }
