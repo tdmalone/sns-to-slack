@@ -10,7 +10,8 @@
 'use strict';
 
 const https = require( 'https' ),
-      aws = require( 'aws-sdk' );
+      aws = require( 'aws-sdk' ),
+      isPlainObj = require( 'is-plain-obj');
 
 const DEBUG = 'true' === process.env.DEBUG;
 
@@ -96,20 +97,37 @@ exports.handler = ( event, context, callback ) => {
     let json = JSON.parse( message );
     const fields = [];
 
-    // Message config change notifications from AWS Config - we only need the diff, not the whole config.
-    if ( json.configurationItemDiff && 'ConfigurationItemChangeNotification' === json.messageType ) {
-      json = json.configurationItemDiff;
-    }
+    // In case we end up with a number, array or string - all of which could be valid JSON - we need to check.
+    if ( isPlainObj( json ) ) {
 
-    Object.keys( json ).forEach( ( key ) => {
-      fields.push({
-        title: key,
-        value: 'string' === typeof json[key] ? json[key] : JSON.stringify( json[key] )
+      // Massage config change notifications from AWS Config - we only need the diff, not the whole config.
+      if ( json.configurationItemDiff && 'ConfigurationItemChangeNotification' === json.messageType ) {
+        json = json.configurationItemDiff;
+
+        // Bring the changedProperties up to the first level if we only have changeType alongside it.
+        if ( json.changedProperties && json.changeType && 2 === Object.keys( json ).length ) {
+          let changeType = json.changeType;
+          json = json.changedProperties;
+          json.changeType = json.changeType || changeType;
+        }
+      }
+
+      // If we only have one property, jump down a level and use that instead.
+      while ( 1 === Object.keys( json ).length ) {
+        json = json[ Object.keys( json ).shift() ];
+      }
+
+      Object.keys( json ).forEach( ( key ) => {
+        fields.push({
+          title: key,
+          value: 'string' === typeof json[key] ? json[key] : JSON.stringify( json[key] )
+        });
       });
-    });
 
-    attachment.text = '';
-    attachment.fields = fields;
+      attachment.text = '';
+      attachment.fields = fields;
+
+    }
 
   } catch ( error ) {
     // Proceed without making any changes if we couldn't successfully parse JSON.
