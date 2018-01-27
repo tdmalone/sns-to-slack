@@ -10,7 +10,7 @@
         "Signature": "EXAMPLE",
         "SigningCertUrl": "EXAMPLE",
         "MessageId": "12345678-1234-1234-1234-1234567890ab",
-        "Message": "{\"configurationItemDiff\": {\"changedProperties\": {},\"changeType\": \"CREATE\"},\"configurationItem\": {\"relatedEvents\": [],\"relationships\": [{\"resourceId\": \"AGPAI23QXO5UEDY5D5F42\",\"resourceName\": \"lambda-deployments\",\"resourceType\": \"AWS::IAM::Group\",\"name\": \"Is attached to Group\"}],\"configuration\": {\"path\": \"/\",\"userName\": \"travis-ci-sns-to-slack\",\"userId\": \"AIDAJRLTWFRGF3FOSJRUS\",\"arn\": \"arn:aws:iam::873114526714:user/travis-ci-sns-to-slack\",\"createDate\": \"2018-01-26T05:35:15.000Z\",\"userPolicyList\": [],\"groupList\": [\"lambda-deployments\"],\"attachedManagedPolicies\": []},\"supplementaryConfiguration\": {},\"tags\": {},\"configurationItemVersion\": \"1.3\",\"configurationItemCaptureTime\": \"2018-01-26T05:45:32.056Z\",\"configurationStateId\": 1516945532056,\"awsAccountId\": \"873114526714\",\"configurationItemStatus\": \"ResourceDiscovered\",\"resourceType\": \"AWS::IAM::User\",\"resourceId\": \"AIDAJRLTWFRGF3FOSJRUS\",\"resourceName\": \"travis-ci-sns-to-slack\",\"ARN\": \"arn:aws:iam::873114526714:user/travis-ci-sns-to-slack\",\"awsRegion\": \"global\",\"availabilityZone\": \"Not Applicable\",\"configurationStateMd5Hash\": \"\",\"resourceCreationTime\": \"2018-01-26T05:35:15.000Z\"},\"notificationCreationTime\": \"2018-01-26T05:45:35.389Z\",\"messageType\": \"ConfigurationItemChangeNotification\",\"recordVersion\": 1.3}",
+        "Message": "{\"configurationItemDiff\": {\"changedProperties\":{\"Relationships.0\":{\"previousValue\":null,\"updatedValue\":{\"resourceId\":\"ABCDEDGHIJKLMNOPQRSTU\",\"resourceName\":\"some-user\",\"resourceType\":\"AWS::IAM::User\",\"name\":\"Is attached to User\"},\"changeType\":\"CREATE\"},\"Configuration.AttachmentCount\":{\"previousValue\":1,\"updatedValue\":2,\"changeType\":\"DELETE\"}},\"changeType\":\"UPDATE\"},\"configurationItem\": {\"relatedEvents\": [],\"relationships\": [{\"resourceId\": \"ABCDEDGHIJKLMNOPQRSTU\",\"resourceName\": \"some-group\",\"resourceType\": \"AWS::IAM::Group\",\"name\": \"Is attached to Group\"}],\"configuration\": {\"path\": \"/\",\"userName\": \"some-user\",\"userId\": \"ABCDEDGHIJKLMNOPQRSTU\",\"arn\": \"arn:aws:iam::123456789012:user/some-user\",\"createDate\": \"2018-01-26T05:35:15.000Z\",\"userPolicyList\": [],\"groupList\": [\"some-group\"],\"attachedManagedPolicies\": []},\"supplementaryConfiguration\": {},\"tags\": {},\"configurationItemVersion\": \"1.3\",\"configurationItemCaptureTime\": \"2018-01-26T05:45:32.056Z\",\"configurationStateId\": 1516945532056,\"awsAccountId\": \"123456789012\",\"configurationItemStatus\": \"ResourceDiscovered\",\"resourceType\": \"AWS::IAM::User\",\"resourceId\": \"ABCDEDGHIJKLMNOPQRSTU\",\"resourceName\": \"some-user\",\"ARN\": \"arn:aws:iam::123456789012:user/some-user\",\"awsRegion\": \"global\",\"availabilityZone\": \"Not Applicable\",\"configurationStateMd5Hash\": \"\",\"resourceCreationTime\": \"2018-01-26T05:35:15.000Z\"},\"notificationCreationTime\": \"2018-01-26T05:45:35.389Z\",\"messageType\": \"ConfigurationItemChangeNotification\",\"recordVersion\": 1.3}",
         "MessageAttributes": {
           "Test": {
             "Type": "String",
@@ -22,8 +22,8 @@
           }
         },
         "Type": "Notification",
-        "UnsubscribeUrl": "EXAMPLE",
-        "TopicArn": "arn:aws:sns:EXAMPLE",
+        "UnsubscribeUrl": "http://www.example.com",
+        "TopicArn": "arn:aws:sns:region:123456789012:sample-config-sns-topic",
         "Subject": "TestInvoke"
       }
     }
