@@ -11,7 +11,7 @@
 
 const https = require( 'https' ),
       aws = require( 'aws-sdk' ),
-      isPlainObj = require( 'is-plain-obj');
+      isPlainObj = require( 'is-plain-obj' );
 
 const DEBUG = 'true' === process.env.DEBUG;
 
@@ -25,7 +25,8 @@ exports.handler = ( event, context, callback ) => {
 
   try {
     arn = event.Records[0].Sns.TopicArn.match( /\d\d\d:(.*)$/ )[1];
-  } catch( error ) {
+  } catch ( error ) {
+
     // No need to do anything here.
   }
 
@@ -71,7 +72,7 @@ exports.handler = ( event, context, callback ) => {
   ];
 
   for ( const dangerMessagesItem in dangerMessages ) {
-    if ( -1 !== message.indexOf( dangerMessages[dangerMessagesItem] ) ) {
+    if ( -1 !== message.indexOf( dangerMessages[dangerMessagesItem]) ) {
       severity = 'danger';
       break;
     }
@@ -80,7 +81,7 @@ exports.handler = ( event, context, callback ) => {
   // Only check for warning messages if a danger message hasn't been selected.
   if ( 'good' === severity ) {
     for ( const warningMessagesItem in warningMessages ) {
-      if ( -1 !== message.indexOf( warningMessages[warningMessagesItem] ) ) {
+      if ( -1 !== message.indexOf( warningMessages[warningMessagesItem]) ) {
         severity = 'warning';
         break;
       }
@@ -122,7 +123,7 @@ exports.handler = ( event, context, callback ) => {
       Object.keys( json ).forEach( ( key ) => {
         fields.push({
           title: key,
-          value: 'string' === typeof json[key] ? json[key] : JSON.stringify( json[key] )
+          value: 'string' === typeof json[key] ? json[key] : JSON.stringify( json[key])
         });
       });
 
@@ -132,16 +133,17 @@ exports.handler = ( event, context, callback ) => {
     }
 
   } catch ( error ) {
+
     // Proceed without making any changes if we couldn't successfully parse JSON.
   }
 
   postData.attachments = [ attachment ];
 
   const options = {
-    method: 'POST',
+    method:   'POST',
     hostname: 'hooks.slack.com',
-    port: 443,
-    path: '/services/' + process.env.SLACK_HOOK
+    port:     443,
+    path:     '/services/' + process.env.SLACK_HOOK
   };
 
   if ( DEBUG ) console.log( options );
@@ -153,13 +155,13 @@ exports.handler = ( event, context, callback ) => {
 
     response.on( 'data', ( chunk ) => {
       body += chunk;
-    }).on('end', () => {
+    }).on( 'end', () => {
       console.log( 'Response from Slack: ' + body );
       callback( null, body );
     });
   });
 
-  request.on( 'error' , ( error ) => {
+  request.on( 'error', ( error ) => {
     throw Error( 'Problem with Slack request: ' + error.message );
   });
 
