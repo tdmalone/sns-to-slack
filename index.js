@@ -51,7 +51,8 @@ exports.handler = ( event, context, callback ) => {
     'Stack deletion failed',
     'Unsuccessful command execution',
     'You do not have permission',
-    'Your quota allows for 0 more running instance'
+    'Your quota allows for 0 more running instance',
+    ' has reached the build status of \'FAILED\''
   ];
 
   const warningMessages = [
@@ -65,7 +66,8 @@ exports.handler = ( event, context, callback ) => {
     'Ok to Warning',
     'Pending Initialization',
     'Removed instance ',
-    'Rollback of environment'
+    'Rollback of environment',
+    ' has reached the build status of \'IN_PROGRESS\''
   ];
 
   for ( const dangerMessagesItem in dangerMessages ) {
@@ -75,9 +77,9 @@ exports.handler = ( event, context, callback ) => {
     }
   }
 
-  // Only check for warning messages if necessary.
+  // Only check for warning messages if a danger message hasn't been selected.
   if ( 'good' === severity ) {
-    for ( var warningMessagesItem in warningMessages ) {
+    for ( const warningMessagesItem in warningMessages ) {
       if ( -1 !== message.indexOf( warningMessages[warningMessagesItem] ) ) {
         severity = 'warning';
         break;
