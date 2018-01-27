@@ -15,7 +15,7 @@ const https = require( 'https' ),
 
 /* eslint-disable no-process-env */
 const DEBUG = 'true' === process.env.DEBUG,
-      slackHook = process.env.SLACK_HOOK;
+      SLACK_HOOK = process.env.SLACK_HOOK;
 /* eslint-enable no-process-env */
 
 const INDEX_OF_NOT_PRESENT = -1,
@@ -87,11 +87,26 @@ exports.handler = ( event, context, callback ) => {
 
   slackMessage.attachments = [ attachment ];
 
+  sendToSlack( slackMessage, callback );
+
+}; // Exports.handler.
+
+/**
+ * Sends a message to Slack, calling a callback when complete or throwing on error.
+ *
+ * @param {object} message The message to send.
+ * @param {function} callback A callback to call on completion.
+ * @returns {undefined}
+ * @see https://api.slack.com/docs/messages
+ * @see https://api.slack.com/incoming-webhooks
+ */
+function sendToSlack( message, callback ) {
+
   const options = {
     method:   'POST',
     hostname: 'hooks.slack.com',
     port:     443,
-    path:     '/services/' + slackHook
+    path:     '/services/' + SLACK_HOOK
   };
 
   if ( DEBUG ) console.log( options );
@@ -113,10 +128,10 @@ exports.handler = ( event, context, callback ) => {
     throw Error( 'Problem with Slack request: ' + error.message );
   });
 
-  request.write( JSON.stringify( slackMessage ) );
+  request.write( JSON.stringify( message ) );
   request.end();
 
-}; // Exports.handler.
+} // Function sendToSlack.
 
 /**
  * Given a standard ARN of an SNS topic, attempts to return just the name of the topic.
@@ -195,7 +210,8 @@ function maybeGetAttachmentFields( text ) {
   data = applyParsingFilters( data );
 
   // If we only have one property, jump down a level and use that instead.
-  while ( ONE_PROPERTY === Object.keys( data ).length ) {
+  // We also need to check that we have an array or an object too.
+  while ( 'object' === typeof data && ONE_PROPERTY === Object.keys( data ).length ) {
     data = data[ Object.keys( data ).shift() ];
   }
 
