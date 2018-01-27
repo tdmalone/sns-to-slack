@@ -10,69 +10,81 @@
 'use strict';
 
 const https = require( 'https' ),
-      aws = require( 'aws-sdk' ),
       isPlainObj = require( 'is-plain-obj' );
 
-const DEBUG = 'true' === process.env.DEBUG;
+/* eslint-disable no-process-env */
+const DEBUG = 'true' === process.env.DEBUG,
+      slackHook = process.env.SLACK_HOOK;
+/* eslint-enable no-process-env */
+
+const INDEX_OF_NOT_PRESENT = -1,
+      FIRST_ITEM = 0,
+      FIRST_MATCH = 1,
+      ONE_PROPERTY = 1,
+      TWO_PROPERTIES = 2,
+      JSON_SPACES = 2;
+
+const dangerMessages = [
+  ' but with errors',
+  ' to RED',
+  'During an aborted deployment',
+  'Failed to deploy application',
+  'Failed to deploy configuration',
+  'has a dependent object',
+  'is not authorized to perform',
+  'Pending to Degraded',
+  'Stack deletion failed',
+  'Unsuccessful command execution',
+  'You do not have permission',
+  'Your quota allows for 0 more running instance',
+  ' has reached the build status of \'FAILED\''
+];
+
+const warningMessages = [
+  ' aborted operation.',
+  ' to YELLOW',
+  'Adding instance ',
+  'Degraded to Info',
+  'Deleting SNS topic',
+  'is currently running under desired capacity',
+  'Ok to Info',
+  'Ok to Warning',
+  'Pending Initialization',
+  'Removed instance ',
+  'Rollback of environment',
+  ' has reached the build status of \'IN_PROGRESS\''
+];
 
 exports.handler = ( event, context, callback ) => {
 
-  if ( DEBUG ) console.log( JSON.stringify( event, null, 2 ) );
+  if ( DEBUG ) console.log( JSON.stringify( event, null, JSON_SPACES ) );
 
-  console.log( 'From SNS:', event.Records[0].Sns.Message );
+  const sns = event.Records[ FIRST_ITEM ].Sns,
+        arn = sns.TopicArn;
 
-  let arn = event.Records[0].Sns.TopicArn;
+  console.log( 'From SNS:', sns.Message );
+
+  let topicName = '';
 
   try {
-    arn = event.Records[0].Sns.TopicArn.match( /\d\d\d:(.*)$/ )[1];
+    topicName = arn.match( /\d\d\d:(.*)$/ )[ FIRST_MATCH ];
   } catch ( error ) {
 
     // No need to do anything here.
   }
 
-  const postData = {
-    text:     event.Records[0].Sns.Subject ? '*' + event.Records[0].Sns.Subject + '*' : '',
-    username: arn
+  const slackMessage = {
+    text:     sns.Subject ? '*' + sns.Subject + '*' : '',
+    username: topicName || arn
   };
 
-  if ( DEBUG ) postData.text += '\n' + JSON.stringify( event, null, 2 );
+  if ( DEBUG ) slackMessage.text += '\n' + JSON.stringify( event, null, JSON_SPACES );
 
-  const message = event.Records[0].Sns.Message;
+  const messageText = sns.Message;
   let severity = 'good';
 
-  const dangerMessages = [
-    ' but with errors',
-    ' to RED',
-    'During an aborted deployment',
-    'Failed to deploy application',
-    'Failed to deploy configuration',
-    'has a dependent object',
-    'is not authorized to perform',
-    'Pending to Degraded',
-    'Stack deletion failed',
-    'Unsuccessful command execution',
-    'You do not have permission',
-    'Your quota allows for 0 more running instance',
-    ' has reached the build status of \'FAILED\''
-  ];
-
-  const warningMessages = [
-    ' aborted operation.',
-    ' to YELLOW',
-    'Adding instance ',
-    'Degraded to Info',
-    'Deleting SNS topic',
-    'is currently running under desired capacity',
-    'Ok to Info',
-    'Ok to Warning',
-    'Pending Initialization',
-    'Removed instance ',
-    'Rollback of environment',
-    ' has reached the build status of \'IN_PROGRESS\''
-  ];
-
   for ( const dangerMessagesItem in dangerMessages ) {
-    if ( -1 !== message.indexOf( dangerMessages[dangerMessagesItem]) ) {
+    if ( INDEX_OF_NOT_PRESENT !== messageText.indexOf( dangerMessages[dangerMessagesItem]) ) {
       severity = 'danger';
       break;
     }
@@ -81,7 +93,7 @@ exports.handler = ( event, context, callback ) => {
   // Only check for warning messages if a danger message hasn't been selected.
   if ( 'good' === severity ) {
     for ( const warningMessagesItem in warningMessages ) {
-      if ( -1 !== message.indexOf( warningMessages[warningMessagesItem]) ) {
+      if ( INDEX_OF_NOT_PRESENT !== messageText.indexOf( warningMessages[warningMessagesItem]) ) {
         severity = 'warning';
         break;
       }
@@ -90,25 +102,32 @@ exports.handler = ( event, context, callback ) => {
 
   const attachment = {
     color:  severity,
-    text:   message,
-    footer: event.Records[0].Sns.UnsubscribeUrl ? '<' + event.Records[0].Sns.UnsubscribeUrl + '|Unsubscribe>' : ''
+    text:   messageText,
+    footer: ( sns.UnsubscribeUrl ? '<' + sns.UnsubscribeUrl + '|Unsubscribe>' : '' )
   };
 
   // If the message is in JSON, format it more nicely.
   try {
 
-    let json = JSON.parse( message );
+    let json = JSON.parse( messageText );
     const fields = [];
 
-    // In case we end up with a number, array or string - all of which could be valid JSON - we need to check.
+    // In case we end up with a number, array or string - which would be all valid JSON...
     if ( isPlainObj( json ) ) {
 
-      // Massage config change notifications from AWS Config - we only need the diff, not the whole config.
-      if ( json.configurationItemDiff && 'ConfigurationItemChangeNotification' === json.messageType ) {
+      // Massage change notifs from AWS Config - we only need the diff, not the whole config.
+      if (
+        json.configurationItemDiff &&
+        'ConfigurationItemChangeNotification' === json.messageType
+      ) {
         json = json.configurationItemDiff;
 
-        // Bring the changedProperties up to the first level if we only have changeType alongside it.
-        if ( json.changedProperties && json.changeType && 2 === Object.keys( json ).length ) {
+        // Bring the changedProperties up to first level if we only have changeType alongside it.
+        if (
+          json.changedProperties &&
+          json.changeType &&
+          TWO_PROPERTIES === Object.keys( json ).length
+        ) {
           let changeType = json.changeType;
           json = json.changedProperties;
           json.changeType = json.changeType || changeType;
@@ -116,7 +135,7 @@ exports.handler = ( event, context, callback ) => {
       }
 
       // If we only have one property, jump down a level and use that instead.
-      while ( 1 === Object.keys( json ).length ) {
+      while ( ONE_PROPERTY === Object.keys( json ).length ) {
         json = json[ Object.keys( json ).shift() ];
       }
 
@@ -137,13 +156,13 @@ exports.handler = ( event, context, callback ) => {
     // Proceed without making any changes if we couldn't successfully parse JSON.
   }
 
-  postData.attachments = [ attachment ];
+  slackMessage.attachments = [ attachment ];
 
   const options = {
     method:   'POST',
     hostname: 'hooks.slack.com',
     port:     443,
-    path:     '/services/' + process.env.SLACK_HOOK
+    path:     '/services/' + slackHook
   };
 
   if ( DEBUG ) console.log( options );
@@ -165,7 +184,7 @@ exports.handler = ( event, context, callback ) => {
     throw Error( 'Problem with Slack request: ' + error.message );
   });
 
-  request.write( JSON.stringify( postData ) );
+  request.write( JSON.stringify( slackMessage ) );
   request.end();
 
 }; // Exports.handler.
