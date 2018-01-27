@@ -22,8 +22,12 @@ cache:
     - node_modules
 
 install: yarn
-script: yarn lint; yarn test
-before_deploy: rm -rf node_modules && yarn --prod && rm -rf tests .*rc.js
+
+script:
+  - yarn lint
+  - yarn test
+
+before_deploy: rm -rf coverage node_modules tests .*rc.js && yarn --prod
 
 deploy:
 

@@ -11,6 +11,7 @@ Instructions coming soon.
 ## TODO
 
 - Fill out this README more!
+- Add additional unit tests
 - Nicely format form data being sent through as the message
 - Handle nice formats for more AWS services
 - Handle base64 data, such as that coming from AWS SES e-mails

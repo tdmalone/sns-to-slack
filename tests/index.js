@@ -15,6 +15,11 @@ test( 'SNS topic ARN gets shortened correctly', () => {
   expect( index.getNameFromArn( sampleArn ) ).toBe( 'codebuild-notifications' );
 });
 
+test( 'getNameFromArn() returns false if it cannot shortern an ARN', () => {
+  const sampleArn = 'invalid-arn';
+  expect( index.getNameFromArn( sampleArn ) ).toBe( false );
+});
+
 test( 'A failed build gets a danger colour for Slack', () => {
   const text = (
     '"Build \'some-repo-arn:some-commit-hash\' for build project \'some-project\' ' +

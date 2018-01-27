@@ -22,7 +22,8 @@ const INDEX_OF_NOT_PRESENT = -1,
       FIRST_ITEM = 0,
       FIRST_MATCH = 1,
       ONE_PROPERTY = 1,
-      JSON_SPACES = 2;
+      JSON_SPACES = 2,
+      SLACK_COLUMN_LENGTH = 28;
 
 const dangerMessages = [
   ' but with errors',
@@ -63,7 +64,7 @@ exports.handler = ( event, context, callback ) => {
         arn = sns.TopicArn,
         topicName = getNameFromArn( arn );
 
-  console.log( 'From SNS:', sns.Message );
+  console.log( 'From SNS:', sns );
 
   const slackMessage = {
     text:     sns.Subject ? '*' + sns.Subject + '*' : '',
@@ -141,16 +142,11 @@ function sendToSlack( message, callback ) {
  */
 function getNameFromArn( arn ) {
 
-  let name = false;
-
   try {
-    name = arn.match( /\d\d\d:(.*)$/ )[ FIRST_MATCH ];
+    return arn.match( /\d\d\d:(.*)$/ )[ FIRST_MATCH ];
   } catch ( error ) {
-
-    // No need to do anything here.
+    return false;
   }
-
-  return name;
 
 } // Function getNameFromArn.
 
@@ -217,10 +213,15 @@ function maybeGetAttachmentFields( text ) {
 
   // Turn all remaining properties into fields.
   Object.keys( data ).forEach( ( key ) => {
+
+    const value = 'string' === typeof data[key] ? data[key] : JSON.stringify( data[key]);
+
     fields.push({
       title: key,
-      value: 'string' === typeof data[key] ? data[key] : JSON.stringify( data[key])
+      value: value,
+      short: value.length <= SLACK_COLUMN_LENGTH
     });
+
   });
 
   return fields;
