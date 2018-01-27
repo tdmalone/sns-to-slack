@@ -10,9 +10,11 @@
   "scripts": {
     "lint": "cross-env DEBUG=eslint:cli-engine eslint --color --ignore-pattern '/coverage/' --ignore-pattern '/docs/' --ignore-pattern '!.eslintrc.js' \"**/*.js\"",
     "fix": "yarn lint --fix",
-    "test": "yarn test-generic-event && yarn test-config-change && yarn unit-tests",
-    "test-generic-event": "yarn _test \"$(cat tests/fixtures/generic-event.json)\"",
+    "test": "yarn test-code-build-string && yarn test-code-commit-single-property && yarn test-config-change && yarn test-generic-event && yarn unit-tests",
+    "test-code-build-string": "yarn _test \"$(cat tests/fixtures/code-build-string.json)\"",
+    "test-code-commit-single-property": "yarn _test \"$(cat tests/fixtures/code-commit-single-property.json)\"",
     "test-config-change": "yarn _test \"$(cat tests/fixtures/config-change.json)\"",
+    "test-generic-event": "yarn _test \"$(cat tests/fixtures/generic-event.json)\"",
     "_test": "docker run --rm -e CI -e SLACK_HOOK -v \"${PWD}\":/var/task lambci/lambda:nodejs6.10 index.handler",
     "unit-tests": "jest --verbose --coverage"
   },
@@ -28,7 +30,8 @@
     ]
   },
   "dependencies": {
-    "aws-sdk": "^2.170.0"
+    "aws-sdk": "^2.170.0",
+    "is-plain-obj": "^1.1.0"
   },
   "devDependencies": {
     "cross-env": "^5.1.0",
