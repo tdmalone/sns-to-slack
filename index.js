@@ -80,10 +80,15 @@ exports.handler = ( event, context, callback ) => {
   };
 
   // If we can format our message into fields, do that instead of printing it as text.
-  const attachmentFields = maybeGetAttachmentFields( sns.Message );
-  if ( attachmentFields ) {
+  attachment.text = maybeGetAttachmentFields( sns.Message );
+  if ( 'object' === typeof attachment.text ) {
+    attachment.fields = attachment.text;
     attachment.text = '';
-    attachment.fields = attachmentFields;
+  }
+
+  // Trim quotes, in case we've ended up with a JSON string.
+  if ( 'string' === typeof attachment.text ) {
+    attachment.text = attachment.text.replace( /(^"|"$)/g, '' );
   }
 
   slackMessage.attachments = [ attachment ];
@@ -182,8 +187,10 @@ function getColorBySeverity( text ) {
  * This improves readability - it's much easier to decipher than JSON!
  *
  * @param {string} text An incoming SNS message.
- * @returns {array|boolean} Either an array of Slack attachment fields, or false if the message
- *                          could not be converted to fields.
+ * @returns {array|string} An array of Slack attachment fields if possible; otherwise a string to
+ *                         be used as the message text. The string will either be the same as the
+ *                         input, or reduced down to a string if it is the only property in an
+ *                         object.
  * @see https://api.slack.com/docs/message-attachments#fields
  */
 function maybeGetAttachmentFields( text ) {
@@ -194,12 +201,12 @@ function maybeGetAttachmentFields( text ) {
   try {
     data = JSON.parse( text );
   } catch ( error ) {
-    return false;
+    return text;
   }
 
   // We don't want to try splitting up a number, array or string.
   if ( ! isPlainObj( data ) ) {
-    return false;
+    return text;
   }
 
   // Apply any registered filters in ./filters/.
@@ -209,6 +216,11 @@ function maybeGetAttachmentFields( text ) {
   // We also need to check that we have an array or an object too.
   while ( 'object' === typeof data && ONE_PROPERTY === Object.keys( data ).length ) {
     data = data[ Object.keys( data ).shift() ];
+  }
+
+  // And, in case we haven't ended up with an object...
+  if ( ! isPlainObj( data ) ) {
+    return JSON.stringify( data );
   }
 
   // Turn all remaining properties into fields.
