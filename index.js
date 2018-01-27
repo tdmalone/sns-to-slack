@@ -10,6 +10,7 @@
 'use strict';
 
 const https = require( 'https' ),
+      globby = require( 'globby' ),
       isPlainObj = require( 'is-plain-obj' );
 
 /* eslint-disable no-process-env */
@@ -21,7 +22,6 @@ const INDEX_OF_NOT_PRESENT = -1,
       FIRST_ITEM = 0,
       FIRST_MATCH = 1,
       ONE_PROPERTY = 1,
-      TWO_PROPERTIES = 2,
       JSON_SPACES = 2;
 
 const dangerMessages = [
@@ -60,18 +60,10 @@ exports.handler = ( event, context, callback ) => {
   if ( DEBUG ) console.log( JSON.stringify( event, null, JSON_SPACES ) );
 
   const sns = event.Records[ FIRST_ITEM ].Sns,
-        arn = sns.TopicArn;
+        arn = sns.TopicArn,
+        topicName = getNameFromArn( arn );
 
   console.log( 'From SNS:', sns.Message );
-
-  let topicName = '';
-
-  try {
-    topicName = arn.match( /\d\d\d:(.*)$/ )[ FIRST_MATCH ];
-  } catch ( error ) {
-
-    // No need to do anything here.
-  }
 
   const slackMessage = {
     text:     sns.Subject ? '*' + sns.Subject + '*' : '',
@@ -80,80 +72,17 @@ exports.handler = ( event, context, callback ) => {
 
   if ( DEBUG ) slackMessage.text += '\n' + JSON.stringify( event, null, JSON_SPACES );
 
-  const messageText = sns.Message;
-  let severity = 'good';
-
-  for ( const dangerMessagesItem in dangerMessages ) {
-    if ( INDEX_OF_NOT_PRESENT !== messageText.indexOf( dangerMessages[dangerMessagesItem]) ) {
-      severity = 'danger';
-      break;
-    }
-  }
-
-  // Only check for warning messages if a danger message hasn't been selected.
-  if ( 'good' === severity ) {
-    for ( const warningMessagesItem in warningMessages ) {
-      if ( INDEX_OF_NOT_PRESENT !== messageText.indexOf( warningMessages[warningMessagesItem]) ) {
-        severity = 'warning';
-        break;
-      }
-    }
-  }
-
   const attachment = {
-    color:  severity,
-    text:   messageText,
+    color:  getColorBySeverity( sns.Message ),
+    text:   sns.Message,
     footer: ( sns.UnsubscribeUrl ? '<' + sns.UnsubscribeUrl + '|Unsubscribe>' : '' )
   };
 
-  // If the message is in JSON, format it more nicely.
-  try {
-
-    let json = JSON.parse( messageText );
-    const fields = [];
-
-    // In case we end up with a number, array or string - which would be all valid JSON...
-    if ( isPlainObj( json ) ) {
-
-      // Massage change notifs from AWS Config - we only need the diff, not the whole config.
-      if (
-        json.configurationItemDiff &&
-        'ConfigurationItemChangeNotification' === json.messageType
-      ) {
-        json = json.configurationItemDiff;
-
-        // Bring the changedProperties up to first level if we only have changeType alongside it.
-        if (
-          json.changedProperties &&
-          json.changeType &&
-          TWO_PROPERTIES === Object.keys( json ).length
-        ) {
-          let changeType = json.changeType;
-          json = json.changedProperties;
-          json.changeType = json.changeType || changeType;
-        }
-      }
-
-      // If we only have one property, jump down a level and use that instead.
-      while ( ONE_PROPERTY === Object.keys( json ).length ) {
-        json = json[ Object.keys( json ).shift() ];
-      }
-
-      Object.keys( json ).forEach( ( key ) => {
-        fields.push({
-          title: key,
-          value: 'string' === typeof json[key] ? json[key] : JSON.stringify( json[key])
-        });
-      });
-
-      attachment.text = '';
-      attachment.fields = fields;
-
-    }
-
-  } catch ( error ) {
-
-    // Proceed without making any changes if we couldn't successfully parse JSON.
+  // If we can format our message into fields, do that instead of printing it as text.
+  const attachmentFields = maybeGetAttachmentFields( sns.Message );
+  if ( attachmentFields ) {
+    attachment.text = '';
+    attachment.fields = attachmentFields;
   }
 
   slackMessage.attachments = [ attachment ];
@@ -188,3 +117,120 @@ exports.handler = ( event, context, callback ) => {
   request.end();
 
 }; // Exports.handler.
+
+/**
+ * Given a standard ARN of an SNS topic, attempts to return just the name of the topic.
+ *
+ * @param {string} arn A full Amazon Resource Name for an SNS topic.
+ * @returns {string|boolean} Either the topic name, or false if it could not be determined.
+ */
+function getNameFromArn( arn ) {
+
+  let name = false;
+
+  try {
+    name = arn.match( /\d\d\d:(.*)$/ )[ FIRST_MATCH ];
+  } catch ( error ) {
+
+    // No need to do anything here.
+  }
+
+  return name;
+
+} // Function getNameFromArn.
+
+/**
+ * Given message text from an SNS notification, attempts to determine the severity of the
+ * notification and return an appropriate colour setting for a Slack message attachment.
+ *
+ * @param {string} text The message text supplied by the incoming SNS notification.
+ * @returns {string} A valid Slack colour setting: 'danger', 'warning', 'good', or possibly a hex
+ *                   code.
+ * @see https://api.slack.com/docs/message-attachments#color
+ */
+function getColorBySeverity( text ) {
+
+  for ( const dangerMessagesItem in dangerMessages ) {
+    if ( INDEX_OF_NOT_PRESENT !== text.indexOf( dangerMessages[dangerMessagesItem]) ) {
+      return 'danger';
+    }
+  }
+
+  for ( const warningMessagesItem in warningMessages ) {
+    if ( INDEX_OF_NOT_PRESENT !== text.indexOf( warningMessages[warningMessagesItem]) ) {
+      return 'warning';
+    }
+  }
+
+  return 'good';
+
+} // Function getColorBySeverity.
+
+/**
+ * Given an incoming SNS message, attempts to convert it into Slack message attachment fields.
+ * This improves readability - it's much easier to decipher than JSON!
+ *
+ * @param {string} text An incoming SNS message.
+ * @returns {array|boolean} Either an array of Slack attachment fields, or false if the message
+ *                          could not be converted to fields.
+ * @see https://api.slack.com/docs/message-attachments#fields
+ */
+function maybeGetAttachmentFields( text ) {
+
+  const fields = [];
+  let data = '';
+
+  try {
+    data = JSON.parse( text );
+  } catch ( error ) {
+    return false;
+  }
+
+  // We don't want to try splitting up a number, array or string.
+  if ( ! isPlainObj( data ) ) {
+    return false;
+  }
+
+  // Apply any registered filters in ./filters/.
+  data = applyParsingFilters( data );
+
+  // If we only have one property, jump down a level and use that instead.
+  while ( ONE_PROPERTY === Object.keys( data ).length ) {
+    data = data[ Object.keys( data ).shift() ];
+  }
+
+  // Turn all remaining properties into fields.
+  Object.keys( data ).forEach( ( key ) => {
+    fields.push({
+      title: key,
+      value: 'string' === typeof data[key] ? data[key] : JSON.stringify( data[key])
+    });
+  });
+
+  return fields;
+
+} // Function maybeGetAttachmentFields.
+
+/**
+ * Given an input, runs it through any supplied filter functions and returns the resulting output.
+ *
+ * @param {object} input The input object.
+ * @returns {object} output The resulting object, after being passed through all filters.
+ */
+function applyParsingFilters( input ) {
+
+  const parsingFilters = globby.sync( 'filters/**/*.js' );
+  let output = input;
+
+  parsingFilters.forEach( ( filter ) => {
+    output = require( filter )( output );
+  });
+
+  return output;
+
+} // Function applyParsingFilters.
+
+// Export functions for unit testing.
+exports.getNameFromArn = getNameFromArn;
+exports.getColorBySeverity = getColorBySeverity;
+exports.maybeGetAttachmentFields = maybeGetAttachmentFields;

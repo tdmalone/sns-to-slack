@@ -31,6 +31,7 @@
   },
   "dependencies": {
     "aws-sdk": "^2.170.0",
+    "globby": "^7.1.1",
     "is-plain-obj": "^1.1.0"
   },
   "devDependencies": {
