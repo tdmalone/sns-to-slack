@@ -1,6 +1,6 @@
 {
   "name": "sns-to-slack",
-  "version": "0.0.2",
+  "version": "0.1.0",
   "description": "AWS Lambda function to send SNS notifications to a Slack channel.",
   "homepage": "https://github.com/tdmalone/sns-to-slack#readme",
   "repository": "git+https://github.com/tdmalone/sns-to-slack.git",
