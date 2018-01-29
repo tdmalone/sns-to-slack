@@ -1,0 +1,45 @@
+{
+  "name": "sns-to-slack",
+  "version": "0.1.1",
+  "description": "AWS Lambda function to send SNS notifications to a Slack channel.",
+  "homepage": "https://github.com/tdmalone/sns-to-slack#readme",
+  "repository": "git+https://github.com/tdmalone/sns-to-slack.git",
+  "main": "index.js",
+  "author": "Tim Malone <tdmalone@gmail.com>",
+  "license": "MIT",
+  "scripts": {
+    "lint": "cross-env DEBUG=eslint:cli-engine eslint --color --ignore-pattern '/coverage/' --ignore-pattern '/docs/' --ignore-pattern '!.eslintrc.js' \"**/*.js\"",
+    "fix": "yarn lint --fix",
+    "test": "yarn test-code-build-string && yarn test-code-commit-single-property && yarn test-config-change-single-string && yarn test-config-change && yarn test-generic-event && yarn unit-tests",
+    "test-code-build-string": "yarn _test \"$(cat tests/fixtures/code-build-string.json)\"",
+    "test-code-commit-single-property": "yarn _test \"$(cat tests/fixtures/code-commit-single-property.json)\"",
+    "test-config-change-single-string": "yarn _test \"$(cat tests/fixtures/config-change-single-string.json)\"",
+    "test-config-change": "yarn _test \"$(cat tests/fixtures/config-change.json)\"",
+    "test-generic-event": "yarn _test \"$(cat tests/fixtures/generic-event.json)\"",
+    "_test": "docker run --rm -e CI -e SLACK_HOOK -v \"${PWD}\":/var/task lambci/lambda:nodejs6.10 index.handler",
+    "unit-tests": "jest --verbose --coverage"
+  },
+  "keywords": [
+    "aws",
+    "lambda",
+    "slack",
+    "sns"
+  ],
+  "jest": {
+    "testMatch": [
+      "**/tests/**/*.js"
+    ]
+  },
+  "dependencies": {
+    "aws-sdk": "^2.170.0",
+    "globby": "^7.1.1",
+    "is-plain-obj": "^1.1.0"
+  },
+  "devDependencies": {
+    "cross-env": "^5.1.0",
+    "eslint": "^4.8.0",
+    "eslint-config-tdmalone": "^0.0.1",
+    "jest": "^21.2.1",
+    "jest-tobetype": "^1.1.0"
+  }
+}
