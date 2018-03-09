@@ -183,8 +183,8 @@ function getColorBySeverity( text ) {
 } // Function getColorBySeverity.
 
 /**
- * Given an incoming SNS message, attempts to convert it into Slack message attachment fields.
- * This improves readability - it's much easier to decipher than JSON!
+ * Given an incoming SNS message in either JSON or form data, attempts to convert it into Slack
+ * message attachment fields. This improves readability - it's much easier for a human to decipher!
  *
  * @param {string} text An incoming SNS message.
  * @returns {array|string} An array of Slack attachment fields if possible; otherwise a string to
@@ -198,10 +198,25 @@ function maybeGetAttachmentFields( text ) {
   const fields = [];
   let data = '';
 
+  // - Try first to parse JSON.
+  // - If we can't do that, try to parse a query string (+ force it into the same object prototype).
+  // - If we can't do that, just return the text we end up with.
+  //
+  // Note that even with a single string, most of the time the querystring parser will probably not
+  // fail, and we'll end up with a one property JSON with the string as the key and the value
+  // blank. That's not ideal, but we'll check for it when we try to narrow down to a single
+  // property.
   try {
     data = JSON.parse( text );
   } catch ( error ) {
-    return text;
+
+    try {
+      const querystring = require( 'querystring' );
+      data = JSON.parse( JSON.stringify( querystring.parse( text ) ) );
+    } catch ( error ) {
+      return text;
+    }
+
   }
 
   // We don't want to try splitting up a number, array or string.
@@ -212,9 +227,15 @@ function maybeGetAttachmentFields( text ) {
   // Apply any registered filters in ./filters/.
   data = applyParsingFilters( data );
 
-  // If we only have one property, jump down a level and use that instead.
-  // We also need to check that we have an array or an object too.
-  while ( 'object' === typeof data && ONE_PROPERTY === Object.keys( data ).length ) {
+  // If we only have one property, jump down a level and use that instead. We also need to check
+  // that we have an array or an object too, and that the one property has a value. This last check
+  // is important - because of our sorta querystring hack above we'll often end up with a JSON key
+  // with no value if the message was a simple string!
+  while (
+    'object' === typeof data &&
+    ONE_PROPERTY === Object.keys( data ).length &&
+    data[ Object.keys( data ).shift() ]
+  ) {
     data = data[ Object.keys( data ).shift() ];
   }
 
@@ -228,10 +249,12 @@ function maybeGetAttachmentFields( text ) {
 
     const value = 'string' === typeof data[key] ? data[key] : JSON.stringify( data[key]);
 
+    // In most cases, show the key as the title and the value as the value. But if we have a key
+    // only, we'll use that as the value instead.
     fields.push({
-      title: key,
-      value: value,
-      short: value.length <= SLACK_COLUMN_LENGTH
+      title: value ? key : '',
+      value: value ? value : key,
+      short: value ? value.length <= SLACK_COLUMN_LENGTH : key.length <= SLACK_COLUMN_LENGTH
     });
 
   });
