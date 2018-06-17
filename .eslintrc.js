@@ -2,5 +2,13 @@
 'use strict';
 
 module.exports = {
-  extends: [ 'tdmalone' ]
+
+  extends: [ 'tdmalone' ],
+
+  'rules': {
+
+    // Shouldn't really do this, but maybe inheriting 15 is too low?
+    'max-statements': [ 'error', { max: 20 } ]
+
+  }
 };
